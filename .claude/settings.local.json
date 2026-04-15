@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" \"https://www.hellofresh.es/recipes\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" \"https://www.hellofresh.es/_next/data/7.98.29139/recipes.json\")",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" \"https://www.hellofresh.es/_next/data/7.98.29141/recipes.json\")",
+      "Bash(curl -s -X POST -H \"Content-Type: application/json\" \"https://food-graphql-router.live-k8s.hellofresh.io/graphql\" -d '{\"query\":\"{ recipes { id name } }\"}')",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" \"https://www.hellofresh.es/recipes/arroz-sencillo-de-pollo-al-tomillo-67236703662b2e47e3997fb8\")",
+      "Bash(npm --version)",
+      "Bash(npx create-next-app@latest *)",
+      "Bash(cp -r /root/hello-recipes/. /root/helloRecipes/)",
+      "Bash(rm -rf /root/hello-recipes)",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest *)"
+    ]
+  }
+}
