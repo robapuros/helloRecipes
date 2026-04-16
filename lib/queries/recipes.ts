@@ -14,6 +14,65 @@ export interface RecipeFilters {
 export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCardData[]> {
   const supabase = await createClient()
 
+  // --- Step 1: collect allowed recipe ID sets from RPC-based filters ---
+
+  const idSets: string[][] = []
+
+  // Full-text search via RPC
+  if (filters.search) {
+    const { data } = await supabase.rpc('search_recipes', {
+      query_text: filters.search,
+    })
+    idSets.push((data ?? []).map((r: { id: string }) => r.id))
+  }
+
+  // Ingredient filter via RPC
+  let matchCountMap: Map<string, { match: number; total: number }> | null = null
+  if (filters.ingredientIds && filters.ingredientIds.length > 0) {
+    const rpcFn =
+      filters.ingredientMode === 'any'
+        ? 'recipes_with_any_ingredient'
+        : 'recipes_with_all_ingredients'
+    const { data: rpcData } = await supabase.rpc(rpcFn, {
+      ingredient_ids: filters.ingredientIds,
+      serving_size: 2,
+    })
+    idSets.push((rpcData ?? []).map((r: { id: string }) => r.id))
+
+    // Fetch match counts for badge display
+    const { data: countData } = await supabase.rpc('recipes_with_ingredient_match_count', {
+      ingredient_ids: filters.ingredientIds,
+      serving_size: 2,
+    })
+    matchCountMap = new Map(
+      (countData ?? []).map(
+        (r: { recipe_id: string; match_count: number; total_count: number }) => [
+          r.recipe_id,
+          { match: Number(r.match_count), total: Number(r.total_count) },
+        ],
+      ),
+    )
+  }
+
+  // Utensil filter
+  if (filters.utensilIds && filters.utensilIds.length > 0) {
+    const { data } = await supabase
+      .from('recipe_utensils')
+      .select('recipe_id')
+      .in('utensil_id', filters.utensilIds)
+    const ids = [...new Set((data ?? []).map((r) => r.recipe_id))]
+    idSets.push(ids)
+  }
+
+  // --- Step 2: intersect all ID sets ---
+  let allowedIds: string[] | null = null
+  if (idSets.length > 0) {
+    allowedIds = idSets.reduce((acc, ids) => acc.filter((id) => ids.includes(id)))
+    // If intersection is empty, return early
+    if (allowedIds.length === 0) return []
+  }
+
+  // --- Step 3: main query with scalar filters ---
   let query = supabase
     .from('recipes')
     .select(
@@ -26,10 +85,12 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
     )
     .order('name')
 
+  if (allowedIds) {
+    query = query.in('id', allowedIds)
+  }
   if (filters.maxTime) {
     query = query.lte('total_time_min', filters.maxTime)
   }
-
   if (filters.difficulty && filters.difficulty.length > 0) {
     query = query.in('difficulty', filters.difficulty)
   }
@@ -41,27 +102,20 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
     return []
   }
 
-  // Filter by tags (done in JS since Supabase nested filtering is limited)
+  // --- Step 4: JS-level tag filtering & shape results ---
   let results = (data ?? []).map((r) => ({
     ...r,
-    tags: r.recipe_tags?.flatMap((rt: { tags: unknown }) =>
-      Array.isArray(rt.tags) ? rt.tags : rt.tags ? [rt.tags] : [],
-    ) ?? [],
+    tags:
+      r.recipe_tags?.flatMap((rt: { tags: unknown }) =>
+        Array.isArray(rt.tags) ? rt.tags : rt.tags ? [rt.tags] : [],
+      ) ?? [],
+    matchCount: matchCountMap?.get(r.id)?.match,
+    totalCount: matchCountMap?.get(r.id)?.total,
   })) as RecipeCardData[]
 
   if (filters.tagSlugs && filters.tagSlugs.length > 0) {
     results = results.filter((r) =>
-      filters.tagSlugs!.every((slug) => r.tags.some((t) => t.slug === slug)),
-    )
-  }
-
-  // Full-text search (basic — server-side for now, Sprint 3 uses RPC)
-  if (filters.search) {
-    const q = filters.search.toLowerCase()
-    results = results.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        (r.headline ?? '').toLowerCase().includes(q),
+      filters.tagSlugs!.some((slug) => r.tags.some((t) => t.slug === slug)),
     )
   }
 
@@ -96,12 +150,14 @@ export async function getRecipeBySlug(slug: string): Promise<RecipeWithRelations
 
   return {
     ...data,
-    tags: data.recipe_tags?.flatMap((rt: { tags: unknown }) =>
-      Array.isArray(rt.tags) ? rt.tags : rt.tags ? [rt.tags] : [],
-    ) ?? [],
-    utensils: data.recipe_utensils?.flatMap((ru: { utensils: unknown }) =>
-      Array.isArray(ru.utensils) ? ru.utensils : ru.utensils ? [ru.utensils] : [],
-    ) ?? [],
+    tags:
+      data.recipe_tags?.flatMap((rt: { tags: unknown }) =>
+        Array.isArray(rt.tags) ? rt.tags : rt.tags ? [rt.tags] : [],
+      ) ?? [],
+    utensils:
+      data.recipe_utensils?.flatMap((ru: { utensils: unknown }) =>
+        Array.isArray(ru.utensils) ? ru.utensils : ru.utensils ? [ru.utensils] : [],
+      ) ?? [],
     steps: data.recipe_steps ?? [],
     nutrition: data.recipe_nutrition ?? null,
     recipe_ingredients: data.recipe_ingredients ?? [],

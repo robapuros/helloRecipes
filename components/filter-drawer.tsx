@@ -11,14 +11,17 @@ import {
 } from '@/components/ui/sheet'
 import { FilterControls } from '@/components/filter-controls'
 import type { FilterState } from '@/components/filter-controls'
+import type { SelectedIngredient } from '@/components/ingredient-search'
 
 interface FilterDrawerProps {
   tagsByType: Record<string, Array<{ id: string; name: string; slug: string; count: number }>>
+  utensils: Array<{ id: string; name: string; type: string | null; count: number }>
   currentFilters: FilterState
+  initialIngredients?: SelectedIngredient[]
   activeCount: number
 }
 
-export function FilterDrawer({ tagsByType, currentFilters, activeCount }: FilterDrawerProps) {
+export function FilterDrawer({ tagsByType, utensils, currentFilters, initialIngredients, activeCount }: FilterDrawerProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -43,7 +46,9 @@ export function FilterDrawer({ tagsByType, currentFilters, activeCount }: Filter
 
         <FilterControls
           tagsByType={tagsByType}
+          utensils={utensils}
           currentFilters={currentFilters}
+          initialIngredients={initialIngredients}
           onClose={() => setOpen(false)}
         />
       </SheetContent>

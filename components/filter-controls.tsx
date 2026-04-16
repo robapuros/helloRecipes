@@ -1,20 +1,27 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
-import { Search, X } from 'lucide-react'
+import { Search, X, Soup, UtensilsCrossed, Package } from 'lucide-react'
+import { IngredientSearch } from '@/components/ingredient-search'
+import type { SelectedIngredient } from '@/components/ingredient-search'
 
 export interface FilterState {
   search?: string
   maxTime?: number
   difficulty?: number[]
   tagSlugs?: string[]
+  ingredientIds?: string[]
+  ingredientMode?: 'all' | 'any'
+  utensilIds?: string[]
 }
 
 interface FilterControlsProps {
   tagsByType: Record<string, Array<{ id: string; name: string; slug: string; count: number }>>
+  utensils: Array<{ id: string; name: string; type: string | null; count: number }>
   currentFilters: FilterState
+  initialIngredients?: SelectedIngredient[]
   onClose?: () => void
 }
 
@@ -36,17 +43,55 @@ const TAG_TYPE_LABELS: Record<string, string> = {
   other: 'Más categorías',
 }
 
-export function FilterControls({ tagsByType, currentFilters, onClose }: FilterControlsProps) {
+// Style presets: tag slugs commonly used in HelloFresh ES
+const STYLE_PRESETS = [
+  {
+    id: 'cuchara',
+    label: 'Con cuchara',
+    icon: Soup,
+    tagSlugs: ['sopas-y-cremas', 'sopa', 'crema', 'estofado', 'curry'],
+  },
+  {
+    id: 'tenedor',
+    label: 'Con tenedor',
+    icon: UtensilsCrossed,
+    tagSlugs: ['pasta', 'ensalada', 'arroz', 'carne', 'pescado'],
+  },
+  {
+    id: 'taper',
+    label: 'Para táper',
+    icon: Package,
+    tagSlugs: ['especial-para-taper', 'para-taper', 'taper', 'meal-prep'],
+  },
+]
+
+export function FilterControls({
+  tagsByType,
+  utensils,
+  currentFilters,
+  initialIngredients = [],
+  onClose,
+}: FilterControlsProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
+
+  // Local ingredient state (managed here, synced to URL)
+  const [selectedIngredients, setSelectedIngredients] =
+    useState<SelectedIngredient[]>(initialIngredients)
 
   const buildParams = useCallback(
-    (overrides: Partial<{
-      q: string | null
-      maxTime: number | null
-      difficulty: number[]
-      tags: string[]
-    }>) => {
+    (
+      overrides: Partial<{
+        q: string | null
+        maxTime: number | null
+        difficulty: number[]
+        tags: string[]
+        ingredientIds: string[]
+        ingredientMode: 'all' | 'any'
+        utensilIds: string[]
+      }>,
+    ) => {
       const p = new URLSearchParams(searchParams.toString())
 
       if ('q' in overrides) {
@@ -65,6 +110,21 @@ export function FilterControls({ tagsByType, currentFilters, onClose }: FilterCo
         p.delete('tags')
         overrides.tags?.forEach((s) => p.append('tags', s))
       }
+      if ('ingredientIds' in overrides) {
+        p.delete('ingredientIds')
+        overrides.ingredientIds?.forEach((id) => p.append('ingredientIds', id))
+      }
+      if ('ingredientMode' in overrides) {
+        if (overrides.ingredientMode && overrides.ingredientMode !== 'all') {
+          p.set('ingredientMode', overrides.ingredientMode)
+        } else {
+          p.delete('ingredientMode')
+        }
+      }
+      if ('utensilIds' in overrides) {
+        p.delete('utensilIds')
+        overrides.utensilIds?.forEach((id) => p.append('utensilIds', id))
+      }
       return p
     },
     [searchParams],
@@ -73,15 +133,16 @@ export function FilterControls({ tagsByType, currentFilters, onClose }: FilterCo
   const navigate = useCallback(
     (params: URLSearchParams) => {
       const qs = params.toString()
-      router.push(qs ? `/?${qs}` : '/')
+      startTransition(() => {
+        router.push(qs ? `/?${qs}` : '/')
+      })
       onClose?.()
     },
     [router, onClose],
   )
 
   const toggleTime = (t: number) => {
-    const isActive = currentFilters.maxTime === t
-    navigate(buildParams({ maxTime: isActive ? null : t }))
+    navigate(buildParams({ maxTime: currentFilters.maxTime === t ? null : t }))
   }
 
   const toggleDifficulty = (d: number) => {
@@ -96,17 +157,64 @@ export function FilterControls({ tagsByType, currentFilters, onClose }: FilterCo
     navigate(buildParams({ tags: next }))
   }
 
-  const clearAll = () => navigate(new URLSearchParams())
+  const toggleUtensil = (id: string) => {
+    const current = currentFilters.utensilIds ?? []
+    const next = current.includes(id) ? current.filter((u) => u !== id) : [...current, id]
+    navigate(buildParams({ utensilIds: next }))
+  }
+
+  const handleIngredientSelect = (ing: SelectedIngredient) => {
+    const next = [...selectedIngredients, ing]
+    setSelectedIngredients(next)
+    navigate(
+      buildParams({
+        ingredientIds: next.map((i) => i.id),
+        ingredientMode: currentFilters.ingredientMode,
+      }),
+    )
+  }
+
+  const handleIngredientRemove = (id: string) => {
+    const next = selectedIngredients.filter((i) => i.id !== id)
+    setSelectedIngredients(next)
+    navigate(
+      buildParams({
+        ingredientIds: next.map((i) => i.id),
+        ingredientMode: next.length > 0 ? currentFilters.ingredientMode : undefined,
+      }),
+    )
+  }
+
+  const handleModeChange = (mode: 'all' | 'any') => {
+    navigate(buildParams({ ingredientMode: mode }))
+  }
+
+  const applyStylePreset = (preset: (typeof STYLE_PRESETS)[number]) => {
+    // Toggle: if all preset tags already active, clear them; otherwise set them
+    const current = currentFilters.tagSlugs ?? []
+    const presetActive = preset.tagSlugs.some((s) => current.includes(s))
+    const next = presetActive
+      ? current.filter((s) => !preset.tagSlugs.includes(s))
+      : [...current.filter((s) => !STYLE_PRESETS.flatMap((p) => p.tagSlugs).includes(s)), ...preset.tagSlugs]
+    navigate(buildParams({ tags: next }))
+  }
+
+  const clearAll = () => {
+    setSelectedIngredients([])
+    navigate(new URLSearchParams())
+  }
 
   const hasActiveFilters =
     !!currentFilters.search ||
     !!currentFilters.maxTime ||
     (currentFilters.difficulty?.length ?? 0) > 0 ||
-    (currentFilters.tagSlugs?.length ?? 0) > 0
+    (currentFilters.tagSlugs?.length ?? 0) > 0 ||
+    (currentFilters.ingredientIds?.length ?? 0) > 0 ||
+    (currentFilters.utensilIds?.length ?? 0) > 0
 
   return (
     <div className="space-y-6">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
           Filtros
@@ -151,6 +259,35 @@ export function FilterControls({ tagsByType, currentFilters, onClose }: FilterCo
             Buscar
           </button>
         </form>
+      </div>
+
+      {/* Estilo de plato */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Estilo de plato
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {STYLE_PRESETS.map((preset) => {
+            const Icon = preset.icon
+            const isActive = preset.tagSlugs.some((s) =>
+              (currentFilters.tagSlugs ?? []).includes(s),
+            )
+            return (
+              <button
+                key={preset.id}
+                onClick={() => applyStylePreset(preset)}
+                className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border transition-colors ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border hover:border-primary hover:text-primary'
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                {preset.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Max time */}
@@ -208,20 +345,66 @@ export function FilterControls({ tagsByType, currentFilters, onClose }: FilterCo
         </div>
       </div>
 
+      {/* Ingredient search */}
+      <IngredientSearch
+        selected={selectedIngredients}
+        mode={currentFilters.ingredientMode ?? 'all'}
+        onSelect={handleIngredientSelect}
+        onRemove={handleIngredientRemove}
+        onModeChange={handleModeChange}
+      />
+
+      {/* Utensils */}
+      {utensils.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Utensilios
+          </p>
+          <div className="space-y-1.5">
+            {utensils.slice(0, 10).map((u) => {
+              const isActive = (currentFilters.utensilIds ?? []).includes(u.id)
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => toggleUtensil(u.id)}
+                  className={`w-full flex items-center justify-between text-sm rounded-lg px-2 py-1.5 transition-colors text-left ${
+                    isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-secondary'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                        isActive ? 'bg-primary border-primary' : 'border-input'
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="text-primary-foreground text-[10px]">✓</span>
+                      )}
+                    </span>
+                    {u.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{u.count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tags by type */}
       {Object.entries(tagsByType)
         .filter(([, tags]) => tags.some((t) => t.count > 0))
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([type, typeTags]) => {
-          const visibleTags = typeTags.filter((t) => t.count > 0).slice(0, 8)
-          if (visibleTags.length === 0) return null
+          const visible = typeTags.filter((t) => t.count > 0).slice(0, 8)
+          if (visible.length === 0) return null
           return (
             <div key={type} className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 {TAG_TYPE_LABELS[type] ?? type}
               </p>
               <div className="space-y-1">
-                {visibleTags.map((tag) => {
+                {visible.map((tag) => {
                   const isActive = (currentFilters.tagSlugs ?? []).includes(tag.slug)
                   return (
                     <button

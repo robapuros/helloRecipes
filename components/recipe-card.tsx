@@ -52,6 +52,13 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             Ver receta →
           </span>
         </div>
+
+        {/* Ingredient match badge */}
+        {recipe.matchCount != null && recipe.totalCount != null && (
+          <div className="absolute top-2 right-2 bg-black/70 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm">
+            {recipe.matchCount}/{recipe.totalCount} ingredientes
+          </div>
+        )}
       </div>
 
       {/* Card body */}

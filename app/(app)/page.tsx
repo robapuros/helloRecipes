@@ -3,6 +3,7 @@ import { RecipeGrid, RecipeGridSkeleton } from '@/components/recipe-grid'
 import { FilterControls } from '@/components/filter-controls'
 import { FilterDrawer } from '@/components/filter-drawer'
 import { getRecipes, getTagsWithCounts } from '@/lib/queries/recipes'
+import { getIngredientsByIds, getUtensilsWithCounts } from '@/lib/queries/ingredients'
 import type { RecipeFilters } from '@/lib/queries/recipes'
 import type { Metadata } from 'next'
 
@@ -16,6 +17,9 @@ interface PageProps {
     maxTime?: string
     difficulty?: string | string[]
     tags?: string | string[]
+    ingredientIds?: string | string[]
+    ingredientMode?: string
+    utensilIds?: string | string[]
   }>
 }
 
@@ -36,7 +40,6 @@ async function RecipesContent({ filters }: { filters: RecipeFilters }) {
 
 export default async function GalleryPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const tags = await getTagsWithCounts()
 
   // Parse URL search params into filters
   const filters: RecipeFilters = {}
@@ -50,6 +53,24 @@ export default async function GalleryPage({ searchParams }: PageProps) {
   if (params.tags) {
     filters.tagSlugs = Array.isArray(params.tags) ? params.tags : [params.tags]
   }
+  if (params.ingredientIds) {
+    filters.ingredientIds = Array.isArray(params.ingredientIds)
+      ? params.ingredientIds
+      : [params.ingredientIds]
+  }
+  if (params.ingredientMode === 'any') filters.ingredientMode = 'any'
+  if (params.utensilIds) {
+    filters.utensilIds = Array.isArray(params.utensilIds)
+      ? params.utensilIds
+      : [params.utensilIds]
+  }
+
+  // Parallel data fetching
+  const [tags, utensils, initialIngredients] = await Promise.all([
+    getTagsWithCounts(),
+    getUtensilsWithCounts(),
+    getIngredientsByIds(filters.ingredientIds ?? []),
+  ])
 
   // Group tags by type for the filter UI
   const tagsByType = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
@@ -63,7 +84,9 @@ export default async function GalleryPage({ searchParams }: PageProps) {
     (filters.search ? 1 : 0) +
     (filters.maxTime ? 1 : 0) +
     (filters.difficulty?.length ?? 0) +
-    (filters.tagSlugs?.length ?? 0)
+    (filters.tagSlugs?.length ?? 0) +
+    (filters.ingredientIds?.length ?? 0) +
+    (filters.utensilIds?.length ?? 0)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -79,7 +102,12 @@ export default async function GalleryPage({ searchParams }: PageProps) {
         {/* Desktop sidebar */}
         <aside className="hidden lg:block w-64 shrink-0">
           <div className="sticky top-24 rounded-2xl border border-border/60 bg-card p-5 overflow-y-auto max-h-[calc(100dvh-7rem)]">
-            <FilterControls tagsByType={tagsByType} currentFilters={filters} />
+            <FilterControls
+              tagsByType={tagsByType}
+              utensils={utensils}
+              currentFilters={filters}
+              initialIngredients={initialIngredients}
+            />
           </div>
         </aside>
 
@@ -89,12 +117,15 @@ export default async function GalleryPage({ searchParams }: PageProps) {
           <div className="flex items-center justify-between mb-5 lg:hidden">
             <FilterDrawer
               tagsByType={tagsByType}
+              utensils={utensils}
               currentFilters={filters}
+              initialIngredients={initialIngredients}
               activeCount={activeFilterCount}
             />
             {activeFilterCount > 0 && (
               <p className="text-sm text-muted-foreground">
-                {activeFilterCount} filtro{activeFilterCount !== 1 ? 's' : ''} activo{activeFilterCount !== 1 ? 's' : ''}
+                {activeFilterCount} filtro{activeFilterCount !== 1 ? 's' : ''} activo
+                {activeFilterCount !== 1 ? 's' : ''}
               </p>
             )}
           </div>

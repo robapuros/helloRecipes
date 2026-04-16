@@ -130,6 +130,10 @@ export interface RecipeCardData {
   image_url: string | null
   average_rating: number | null
   tags: Pick<Tag, 'id' | 'name' | 'slug' | 'type' | 'color_handle'>[]
+  /** Only set when an ingredient filter is active */
+  matchCount?: number
+  /** Only set when an ingredient filter is active */
+  totalCount?: number
 }
 
 export interface ShoppingListIngredient {
