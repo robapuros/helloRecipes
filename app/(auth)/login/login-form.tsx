@@ -19,6 +19,11 @@ export function LoginForm() {
     setError(null)
     setLoading(true)
 
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    console.log('[debug] SUPABASE_URL repr:', JSON.stringify(url))
+    console.log('[debug] ANON_KEY length:', key?.length)
+
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
