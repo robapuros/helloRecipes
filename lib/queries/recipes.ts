@@ -160,7 +160,11 @@ export async function getRecipeBySlug(slug: string): Promise<RecipeWithRelations
       ) ?? [],
     steps: data.recipe_steps ?? [],
     nutrition: data.recipe_nutrition ?? null,
-    recipe_ingredients: data.recipe_ingredients ?? [],
+    // Supabase returns the joined table as `ingredients` (table name).
+    // Remap to `ingredient` (singular) to match our RecipeWithRelations type.
+    recipe_ingredients: (data.recipe_ingredients ?? []).map(
+      (ri: Record<string, unknown>) => ({ ...ri, ingredient: ri.ingredients }),
+    ),
   } as RecipeWithRelations
 }
 
