@@ -29,12 +29,29 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
     idSets.push([...favoriteSet])
   }
 
-  // Full-text search via RPC
+  // Full-text search via RPC, with ilike fallback for short/stopword-only queries
   if (filters.search) {
-    const { data } = await supabase.rpc('search_recipes', {
+    const { data, error: searchError } = await supabase.rpc('search_recipes', {
       query_text: filters.search,
     })
-    idSets.push((data ?? []).map((r: { id: string }) => r.id))
+    if (!searchError && data && data.length > 0) {
+      idSets.push(data.map((r: { id: string }) => r.id))
+    } else {
+      // RPC failed or returned nothing — fall back to simple name/headline ilike search
+      const { data: likeData } = await supabase
+        .from('recipes')
+        .select('id')
+        .or(
+          `name.ilike.%${filters.search}%,headline.ilike.%${filters.search}%`,
+        )
+        .limit(5000)
+      if (likeData && likeData.length > 0) {
+        idSets.push(likeData.map((r: { id: string }) => r.id))
+      } else {
+        // No results from either method — return empty immediately
+        return []
+      }
+    }
   }
 
   // Ingredient filter via RPC
@@ -44,11 +61,15 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
       filters.ingredientMode === 'any'
         ? 'recipes_with_any_ingredient'
         : 'recipes_with_all_ingredients'
-    const { data: rpcData } = await supabase.rpc(rpcFn, {
+    const { data: rpcData, error: ingError } = await supabase.rpc(rpcFn, {
       ingredient_ids: filters.ingredientIds,
       serving_size: 2,
     })
-    idSets.push((rpcData ?? []).map((r: { id: string }) => r.id))
+    if (ingError) {
+      console.error('Ingredient filter RPC error:', ingError)
+    } else {
+      idSets.push((rpcData ?? []).map((r: { id: string }) => r.id))
+    }
 
     // Fetch match counts for badge display
     const { data: countData } = await supabase.rpc('recipes_with_ingredient_match_count', {
@@ -67,12 +88,16 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
 
   // Utensil filter
   if (filters.utensilIds && filters.utensilIds.length > 0) {
-    const { data } = await supabase
+    const { data, error: utensilError } = await supabase
       .from('recipe_utensils')
       .select('recipe_id')
       .in('utensil_id', filters.utensilIds)
-    const ids = [...new Set((data ?? []).map((r) => r.recipe_id))]
-    idSets.push(ids)
+    if (utensilError) {
+      console.error('Utensil filter error:', utensilError)
+    } else {
+      const ids = [...new Set((data ?? []).map((r) => r.recipe_id))]
+      idSets.push(ids)
+    }
   }
 
   // --- Step 2: intersect all ID sets ---
