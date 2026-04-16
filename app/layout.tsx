@@ -19,7 +19,6 @@ export const metadata: Metadata = {
     default: 'HelloRecipes — Nuestras recetas favoritas',
   },
   description: 'Todas nuestras recetas HelloFresh guardadas en un solo lugar.',
-  manifest: '/manifest.json',
 }
 
 export default function RootLayout({
