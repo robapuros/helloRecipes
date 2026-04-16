@@ -141,6 +141,7 @@ export function IngredientSearch({
             onChange={handleInput}
             onFocus={() => results.length > 0 && setOpen(true)}
             placeholder="Escribe un ingrediente..."
+            autoComplete="off"
             className="w-full h-8 pl-8 pr-7 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {loading && (

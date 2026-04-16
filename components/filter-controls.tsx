@@ -249,6 +249,7 @@ export function FilterControls({
               name="q"
               defaultValue={currentFilters.search}
               placeholder="Busca una receta..."
+              autoComplete="off"
               className="pl-8 h-8 text-sm"
             />
           </div>
