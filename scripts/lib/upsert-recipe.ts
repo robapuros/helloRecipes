@@ -20,7 +20,8 @@ export async function upsertRecipe(
       `recipes/${parsed.hf_id}/hero.jpg`,
     )
 
-    // 2. Upsert tags
+    // 2. Upsert tags — use slug as conflict target since tags can share a slug
+    // across different hf_ids (variants). Fall back to fetching by slug on conflict.
     const tagIdMap: Record<string, string> = {}
     for (const tag of parsed.tags) {
       const { data, error } = await supabase
@@ -34,11 +35,24 @@ export async function upsertRecipe(
             color_handle: tag.color_handle,
             display_label: tag.display_label,
           },
-          { onConflict: 'hf_id' },
+          { onConflict: 'slug', ignoreDuplicates: false },
         )
         .select('id')
         .single()
-      if (error) throw new Error(`Tag upsert failed: ${error.message}`)
+
+      if (error) {
+        // Slug already exists with a different hf_id — fetch the existing row
+        const { data: existing } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('slug', tag.slug)
+          .single()
+        if (existing) {
+          tagIdMap[tag.hf_id] = existing.id
+        }
+        // If still not found, skip this tag silently
+        continue
+      }
       tagIdMap[tag.hf_id] = data.id
     }
 
