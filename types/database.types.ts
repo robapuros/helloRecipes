@@ -134,6 +134,7 @@ export interface RecipeCardData {
   matchCount?: number
   /** Only set when an ingredient filter is active */
   totalCount?: number
+  isFavorite?: boolean
 }
 
 export interface ShoppingListIngredient {

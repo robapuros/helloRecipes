@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   if (p.get('ingredientMode') === 'any') filters.ingredientMode = 'any'
   const utensilIds = p.getAll('utensilIds')
   if (utensilIds.length) filters.utensilIds = utensilIds
+  if (p.get('favorites') === '1') filters.favoritesOnly = true
 
   const offset = parseInt(p.get('offset') ?? '0')
   const limit = parseInt(p.get('limit') ?? '24')

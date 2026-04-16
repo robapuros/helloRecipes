@@ -2,6 +2,7 @@
 
 import { useShoppingListStore } from '@/store/shopping-list'
 import { RecipeCard } from '@/components/recipe-card'
+import { FavoriteButton } from '@/components/favorite-button'
 import type { RecipeCardData } from '@/types/database.types'
 
 interface Props {
@@ -15,7 +16,8 @@ export function SelectableRecipeCard({ recipe }: Props) {
   return (
     <div className="relative group/selectable">
       <RecipeCard recipe={recipe} />
-      {/* Checkbox overlay */}
+
+      {/* Shopping list checkbox — top left */}
       <button
         onClick={(e) => {
           e.preventDefault()
@@ -25,7 +27,7 @@ export function SelectableRecipeCard({ recipe }: Props) {
         aria-label={selected ? 'Quitar de la lista' : 'Añadir a la lista'}
         className={`absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all z-10
           ${selected
-            ? 'bg-primary border-primary shadow-md'
+            ? 'bg-primary border-primary shadow-md opacity-100'
             : 'bg-white/80 border-white/60 opacity-0 group-hover/selectable:opacity-100 backdrop-blur-sm shadow'
           }`}
       >
@@ -35,6 +37,13 @@ export function SelectableRecipeCard({ recipe }: Props) {
           </svg>
         )}
       </button>
+
+      {/* Favorite button — top right */}
+      <FavoriteButton
+        recipeId={recipe.id}
+        initialFavorite={recipe.isFavorite ?? false}
+        className="absolute top-2 right-2 z-10"
+      />
     </div>
   )
 }

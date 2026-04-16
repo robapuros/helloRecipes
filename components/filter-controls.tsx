@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
-import { Search, X, Soup, UtensilsCrossed, Package } from 'lucide-react'
+import { Search, X, Soup, UtensilsCrossed, Package, Heart } from 'lucide-react'
 import { IngredientSearch } from '@/components/ingredient-search'
 import type { SelectedIngredient } from '@/components/ingredient-search'
 
@@ -15,6 +15,7 @@ export interface FilterState {
   ingredientIds?: string[]
   ingredientMode?: 'all' | 'any'
   utensilIds?: string[]
+  favoritesOnly?: boolean
 }
 
 interface FilterControlsProps {
@@ -90,6 +91,7 @@ export function FilterControls({
         ingredientIds: string[]
         ingredientMode: 'all' | 'any'
         utensilIds: string[]
+        favorites: boolean
       }>,
     ) => {
       const p = new URLSearchParams(searchParams.toString())
@@ -124,6 +126,10 @@ export function FilterControls({
       if ('utensilIds' in overrides) {
         p.delete('utensilIds')
         overrides.utensilIds?.forEach((id) => p.append('utensilIds', id))
+      }
+      if ('favorites' in overrides) {
+        if (overrides.favorites) p.set('favorites', '1')
+        else p.delete('favorites')
       }
       return p
     },
@@ -210,7 +216,8 @@ export function FilterControls({
     (currentFilters.difficulty?.length ?? 0) > 0 ||
     (currentFilters.tagSlugs?.length ?? 0) > 0 ||
     (currentFilters.ingredientIds?.length ?? 0) > 0 ||
-    (currentFilters.utensilIds?.length ?? 0) > 0
+    (currentFilters.utensilIds?.length ?? 0) > 0 ||
+    !!currentFilters.favoritesOnly
 
   return (
     <div className="space-y-6">
@@ -229,6 +236,19 @@ export function FilterControls({
           </button>
         )}
       </div>
+
+      {/* Favorites toggle */}
+      <button
+        onClick={() => navigate(buildParams({ favorites: !currentFilters.favoritesOnly }))}
+        className={`w-full flex items-center gap-2 text-sm rounded-xl px-3 py-2.5 border transition-colors ${
+          currentFilters.favoritesOnly
+            ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-400'
+            : 'border-border hover:border-rose-300 hover:text-rose-500'
+        }`}
+      >
+        <Heart className={`w-4 h-4 shrink-0 ${currentFilters.favoritesOnly ? 'fill-rose-500 text-rose-500' : ''}`} />
+        Solo favoritos
+      </button>
 
       {/* Search */}
       <div className="space-y-1.5">

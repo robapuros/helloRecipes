@@ -6,7 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ServingsToggle } from '@/components/servings-toggle'
 import { RecipeStickyHeader } from '@/components/recipe-sticky-header'
+import { RecipeNotes } from '@/components/recipe-notes'
+import { TrackView } from '@/components/track-view'
+import { FavoriteButton } from '@/components/favorite-button'
 import { getRecipeBySlug } from '@/lib/queries/recipes'
+import { getNoteByRecipeId } from '@/lib/queries/notes'
+import { getFavoriteIds } from '@/lib/queries/favorites'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatTime, timeColor } from '@/lib/utils/time'
 import { difficultyLabel, difficultyColor } from '@/lib/utils/difficulty'
@@ -42,6 +47,12 @@ export default async function RecipePage({ params }: PageProps) {
   const recipe = await getRecipeBySlug(slug)
   if (!recipe) notFound()
 
+  const [note, favoriteIds] = await Promise.all([
+    getNoteByRecipeId(recipe.id).catch(() => null),
+    getFavoriteIds().catch((): string[] => []),
+  ])
+  const isFavorite = favoriteIds.includes(recipe.id)
+
   const steps = (recipe.steps ?? []).sort((a, b) => a.step_index - b.step_index)
 
   type RIWithIngredient = RecipeIngredient & { ingredient: Ingredient }
@@ -53,6 +64,14 @@ export default async function RecipePage({ params }: PageProps) {
 
   return (
     <>
+      {/* Track this page view in localStorage (client only) */}
+      <TrackView
+        recipeId={recipe.id}
+        slug={recipe.slug}
+        name={recipe.name}
+        imageUrl={recipe.image_url}
+      />
+
       {/* Sticky header — appears on scroll */}
       <RecipeStickyHeader
         recipeId={recipe.id}
@@ -133,6 +152,13 @@ export default async function RecipePage({ params }: PageProps) {
                 {t.name}
               </Badge>
             ))}
+          {/* Favorite button */}
+          <FavoriteButton
+            recipeId={recipe.id}
+            initialFavorite={isFavorite}
+            variant="inline"
+            className="ml-auto"
+          />
         </div>
 
         {/* Description */}
@@ -231,6 +257,9 @@ export default async function RecipePage({ params }: PageProps) {
             )}
           </div>
         </div>
+
+        {/* Personal notes */}
+        <RecipeNotes recipeId={recipe.id} initialNote={note} />
 
         {/* Tags footer */}
         {recipe.tags && recipe.tags.length > 0 && (

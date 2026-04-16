@@ -9,14 +9,25 @@ export interface RecipeFilters {
   ingredientIds?: string[]
   ingredientMode?: 'all' | 'any'
   utensilIds?: string[]
+  favoritesOnly?: boolean
 }
 
 export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCardData[]> {
   const supabase = await createClient()
 
+  // --- Step 0: fetch favorites for the current session ---
+  const { data: favData } = await supabase.from('recipe_favorites').select('recipe_id')
+  const favoriteSet = new Set((favData ?? []).map((r: { recipe_id: string }) => r.recipe_id))
+
   // --- Step 1: collect allowed recipe ID sets from RPC-based filters ---
 
   const idSets: string[][] = []
+
+  // Favorites-only filter
+  if (filters.favoritesOnly) {
+    if (favoriteSet.size === 0) return []
+    idSets.push([...favoriteSet])
+  }
 
   // Full-text search via RPC
   if (filters.search) {
@@ -111,6 +122,7 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
       ) ?? [],
     matchCount: matchCountMap?.get(r.id)?.match,
     totalCount: matchCountMap?.get(r.id)?.total,
+    isFavorite: favoriteSet.has(r.id),
   })) as RecipeCardData[]
 
   if (filters.tagSlugs && filters.tagSlugs.length > 0) {

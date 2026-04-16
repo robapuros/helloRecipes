@@ -3,6 +3,7 @@ import { RecipeGridSkeleton } from '@/components/recipe-grid'
 import { InfiniteRecipeGrid } from '@/components/infinite-recipe-grid'
 import { FilterControls } from '@/components/filter-controls'
 import { FilterDrawer } from '@/components/filter-drawer'
+import { RecentlyViewed } from '@/components/recently-viewed'
 import { getRecipes, getTagsWithCounts } from '@/lib/queries/recipes'
 import { getIngredientsByIds, getUtensilsWithCounts } from '@/lib/queries/ingredients'
 import type { RecipeFilters } from '@/lib/queries/recipes'
@@ -21,6 +22,7 @@ interface PageProps {
     ingredientIds?: string | string[]
     ingredientMode?: string
     utensilIds?: string | string[]
+    favorites?: string
   }>
 }
 
@@ -62,6 +64,7 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       ? params.utensilIds
       : [params.utensilIds]
   }
+  if (params.favorites === '1') filters.favoritesOnly = true
 
   const [tags, utensils, initialIngredients] = await Promise.all([
     getTagsWithCounts(),
@@ -82,7 +85,8 @@ export default async function GalleryPage({ searchParams }: PageProps) {
     (filters.difficulty?.length ?? 0) +
     (filters.tagSlugs?.length ?? 0) +
     (filters.ingredientIds?.length ?? 0) +
-    (filters.utensilIds?.length ?? 0)
+    (filters.utensilIds?.length ?? 0) +
+    (filters.favoritesOnly ? 1 : 0)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
@@ -109,6 +113,9 @@ export default async function GalleryPage({ searchParams }: PageProps) {
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
+          {/* Recently viewed strip — renders client-side from localStorage */}
+          <RecentlyViewed />
+
           {/* Mobile: filter row */}
           <div className="flex items-center justify-between mb-5 lg:hidden">
             <FilterDrawer
