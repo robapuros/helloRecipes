@@ -1,8 +1,22 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 
-const HF_IMAGE_BASE = 'https://img.hellofresh.com/hellofresh_s3'
-const HF_SITE_BASE  = 'https://www.hellofresh.es'
-const BUCKET        = 'recipe-images'
+const HF_IMAGE_BASE   = 'https://img.hellofresh.com/hellofresh_s3'
+const HF_CLOUDFRONT   = 'd3hvwccx09j84u.cloudfront.net'
+const BUCKET          = 'Pics'
+
+/**
+ * Rewrite a CloudFront URL to the working img.hellofresh.com CDN.
+ * CloudFront: https://d3hvwccx09j84u.cloudfront.net/0,0/image/FILE.jpg
+ * Working:    https://img.hellofresh.com/hellofresh_s3/image/FILE.jpg
+ */
+function normaliseImageUrl(url: string): string {
+  if (url.includes(HF_CLOUDFRONT)) {
+    // Strip the size prefix (/0,0/ or /200,200/ etc.) and rebase to hellofresh CDN
+    const path = url.replace(/^https?:\/\/[^/]+\/[\d,]+\//, '/')
+    return `${HF_IMAGE_BASE}${path}`
+  }
+  return url
+}
 
 /**
  * Download an image from HelloFresh CDN and upload it to Supabase Storage.
@@ -15,33 +29,31 @@ export async function uploadImage(
 ): Promise<string | null> {
   if (!imagePath) return null
 
-  // Build the full source URL — try the CDN first, fall back to site domain
-  const sourceUrl = imagePath.startsWith('http')
+  // Build the full source URL
+  const rawUrl = imagePath.startsWith('http')
     ? imagePath
     : `${HF_IMAGE_BASE}${imagePath}`
+
+  const sourceUrl = normaliseImageUrl(rawUrl)
 
   try {
     const response = await fetch(sourceUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HelloRecipes/1.0)' },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     })
 
     if (!response.ok) {
-      // Fallback: try the site domain
-      const fallbackUrl = `${HF_SITE_BASE}${imagePath}`
-      const fallback = await fetch(fallbackUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HelloRecipes/1.0)' },
-        signal: AbortSignal.timeout(15000),
-      })
-      if (!fallback.ok) {
-        throw new Error(`HTTP ${fallback.status} from both CDN and site`)
-      }
-      return uploadBuffer(supabase, await fallback.arrayBuffer(), fallback.headers.get('content-type') ?? 'image/jpeg', storagePath)
+      throw new Error(`HTTP ${response.status}`)
     }
 
-    return uploadBuffer(supabase, await response.arrayBuffer(), response.headers.get('content-type') ?? 'image/jpeg', storagePath)
+    return uploadBuffer(
+      supabase,
+      await response.arrayBuffer(),
+      response.headers.get('content-type') ?? 'image/jpeg',
+      storagePath,
+    )
   } catch (err) {
-    console.error(`  ✗ Image upload failed for ${imagePath}: ${err}`)
+    console.error(`  ✗ Image upload failed for ${sourceUrl}: ${err}`)
     return null
   }
 }

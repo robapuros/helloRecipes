@@ -134,7 +134,7 @@ export function parseRecipe(raw: HFRecipe): ParsedRecipe {
     name: ing.name,
     slug: ing.slug ?? null,
     type: ing.type ?? null,
-    image_path: ing.imagePath ?? null,
+    image_path: (ing as unknown as Record<string, string>).imageLink || ing.imagePath || null,
     allergens: [
       ...(ing.allergens ?? []),
       ...(ing.allergensNew ?? []),
@@ -160,7 +160,7 @@ export function parseRecipe(raw: HFRecipe): ParsedRecipe {
     total_time_min: parseTimeMinutes(raw.totalTime),
     prep_time_min: parseTimeMinutes(raw.prepTime),
     difficulty: raw.difficulty ?? null,
-    image_path: raw.imagePath ?? null,
+    image_path: (raw as unknown as Record<string, string>).imageLink || raw.imagePath || null,
     average_rating: raw.averageRating ?? null,
     ratings_count: raw.ratingsCount ?? null,
     cuisines: raw.cuisines ?? [],
