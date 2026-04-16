@@ -1,17 +1,22 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Clock, ShoppingCart } from 'lucide-react'
+import { Clock, ShoppingCart, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatTime } from '@/lib/utils/time'
+import { useShoppingListStore } from '@/store/shopping-list'
 
 interface RecipeStickyHeaderProps {
+  recipeId: string
   name: string
+  imageUrl: string | null
   totalTimeMin: number | null
 }
 
-export function RecipeStickyHeader({ name, totalTimeMin }: RecipeStickyHeaderProps) {
+export function RecipeStickyHeader({ recipeId, name, imageUrl, totalTimeMin }: RecipeStickyHeaderProps) {
   const [visible, setVisible] = useState(false)
+  const { isSelected, toggle } = useShoppingListStore()
+  const selected = isSelected(recipeId)
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 300)
@@ -34,9 +39,14 @@ export function RecipeStickyHeader({ name, totalTimeMin }: RecipeStickyHeaderPro
               {formatTime(totalTimeMin)}
             </span>
           )}
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Añadir a lista</span>
+          <Button
+            size="sm"
+            variant={selected ? 'default' : 'outline'}
+            className="h-7 text-xs gap-1.5"
+            onClick={() => toggle({ id: recipeId, name, image_url: imageUrl })}
+          >
+            {selected ? <Check className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{selected ? 'En la lista' : 'Añadir a lista'}</span>
           </Button>
         </div>
       </div>

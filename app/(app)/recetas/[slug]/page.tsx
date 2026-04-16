@@ -54,7 +54,12 @@ export default async function RecipePage({ params }: PageProps) {
   return (
     <>
       {/* Sticky header — appears on scroll */}
-      <RecipeStickyHeader name={recipe.name} totalTimeMin={recipe.total_time_min} />
+      <RecipeStickyHeader
+        recipeId={recipe.id}
+        name={recipe.name}
+        imageUrl={recipe.image_url}
+        totalTimeMin={recipe.total_time_min}
+      />
 
       {/* Hero image */}
       <div className="relative h-[50vh] min-h-[300px] bg-muted">

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ChefHat, ShoppingCart, Settings } from 'lucide-react'
+import { ShoppingListBar } from '@/components/shopping-list-bar'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -35,6 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1">
         {children}
       </main>
+
+      {/* Floating shopping list bar */}
+      <ShoppingListBar />
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-6 text-center text-sm text-muted-foreground">

@@ -1,4 +1,4 @@
-import { RecipeCard } from '@/components/recipe-card'
+import { SelectableRecipeCard } from '@/components/recipe-select-overlay'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { RecipeCardData } from '@/types/database.types'
 
@@ -22,7 +22,7 @@ export function RecipeGrid({ recipes }: RecipeGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
       {recipes.map((recipe) => (
-        <RecipeCard key={recipe.id} recipe={recipe} />
+        <SelectableRecipeCard key={recipe.id} recipe={recipe} />
       ))}
     </div>
   )
