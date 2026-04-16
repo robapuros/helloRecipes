@@ -121,16 +121,17 @@ CREATE OR REPLACE FUNCTION search_recipes(
 RETURNS SETOF recipes
 LANGUAGE sql STABLE SECURITY DEFINER
 AS $$
-  SELECT DISTINCT r.*
+  SELECT r.*
   FROM recipes r
-  LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-  LEFT JOIN ingredients i ON i.id = ri.ingredient_id
   WHERE
     to_tsvector('spanish', coalesce(r.name,'') || ' ' || coalesce(r.description,'') || ' ' || coalesce(r.headline,''))
       @@ plainto_tsquery('spanish', query_text)
-    OR
-    to_tsvector('spanish', i.name)
-      @@ plainto_tsquery('spanish', query_text)
+    OR r.id IN (
+      SELECT DISTINCT ri.recipe_id
+      FROM recipe_ingredients ri
+      JOIN ingredients i ON i.id = ri.ingredient_id
+      WHERE to_tsvector('spanish', i.name) @@ plainto_tsquery('spanish', query_text)
+    )
   ORDER BY
     ts_rank(
       to_tsvector('spanish', coalesce(r.name,'') || ' ' || coalesce(r.description,'')),
