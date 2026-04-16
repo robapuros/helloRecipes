@@ -1,5 +1,7 @@
 import { Suspense } from 'react'
 import { RecipeGrid, RecipeGridSkeleton } from '@/components/recipe-grid'
+import { FilterControls } from '@/components/filter-controls'
+import { FilterDrawer } from '@/components/filter-drawer'
 import { getRecipes, getTagsWithCounts } from '@/lib/queries/recipes'
 import type { RecipeFilters } from '@/lib/queries/recipes'
 import type { Metadata } from 'next'
@@ -74,22 +76,27 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       </div>
 
       <div className="flex gap-8">
-        {/* Sidebar filters */}
+        {/* Desktop sidebar */}
         <aside className="hidden lg:block w-64 shrink-0">
-          <div className="sticky top-24 space-y-6">
-            <FilterPanel tagsByType={tagsByType} currentFilters={filters} />
+          <div className="sticky top-24 rounded-2xl border border-border/60 bg-card p-5 overflow-y-auto max-h-[calc(100dvh-7rem)]">
+            <FilterControls tagsByType={tagsByType} currentFilters={filters} />
           </div>
         </aside>
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Mobile filter header */}
+          {/* Mobile filter button */}
           <div className="flex items-center justify-between mb-5 lg:hidden">
-            <MobileFilterButton
+            <FilterDrawer
               tagsByType={tagsByType}
               currentFilters={filters}
               activeCount={activeFilterCount}
             />
+            {activeFilterCount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {activeFilterCount} filtro{activeFilterCount !== 1 ? 's' : ''} activo{activeFilterCount !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
 
           <Suspense fallback={<RecipeGridSkeleton />}>
@@ -98,246 +105,5 @@ export default async function GalleryPage({ searchParams }: PageProps) {
         </div>
       </div>
     </div>
-  )
-}
-
-// ──────────────────────────────────────────────
-// Filter Panel (sidebar)
-// ──────────────────────────────────────────────
-
-function FilterPanel({
-  tagsByType,
-  currentFilters,
-}: {
-  tagsByType: Record<string, Array<{ id: string; name: string; slug: string; count: number }>>
-  currentFilters: RecipeFilters
-}) {
-  return (
-    <div className="space-y-6 rounded-2xl border border-border/60 bg-card p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-          Filtros
-        </h2>
-        {(currentFilters.tagSlugs?.length ||
-          currentFilters.maxTime ||
-          currentFilters.difficulty?.length) ? (
-          <a
-            href="/"
-            className="text-xs text-primary hover:underline"
-          >
-            Limpiar todo
-          </a>
-        ) : null}
-      </div>
-
-      {/* Search */}
-      <SearchFilter currentSearch={currentFilters.search} />
-
-      {/* Max time */}
-      <TimeFilter currentMax={currentFilters.maxTime} />
-
-      {/* Difficulty */}
-      <DifficultyFilter current={currentFilters.difficulty ?? []} />
-
-      {/* Tags by type */}
-      {Object.entries(tagsByType)
-        .filter(([, tags]) => tags.length > 0)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([type, typeTags]) => (
-          <TagFilterGroup
-            key={type}
-            type={type}
-            tags={typeTags}
-            selectedSlugs={currentFilters.tagSlugs ?? []}
-          />
-        ))}
-    </div>
-  )
-}
-
-function SearchFilter({ currentSearch }: { currentSearch?: string }) {
-  return (
-    <form method="GET" action="/" className="space-y-1.5">
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Buscar
-      </label>
-      <div className="flex gap-2">
-        <input
-          name="q"
-          defaultValue={currentSearch}
-          placeholder="Busca una receta..."
-          className="flex-1 h-8 text-sm px-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <button
-          type="submit"
-          className="h-8 px-3 text-xs rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90"
-        >
-          →
-        </button>
-      </div>
-    </form>
-  )
-}
-
-function TimeFilter({ currentMax }: { currentMax?: number }) {
-  const options = [15, 25, 35, 45, 60]
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Tiempo máximo
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((t) => {
-          const isActive = currentMax === t
-          const params = new URLSearchParams()
-          if (!isActive) params.set('maxTime', String(t))
-          return (
-            <a
-              key={t}
-              href={isActive ? '/' : `?maxTime=${t}`}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                isActive
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border hover:border-primary hover:text-primary'
-              }`}
-            >
-              {t === 60 ? '+60 min' : `${t} min`}
-            </a>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-const DIFFICULTY_OPTIONS = [
-  { value: 0, label: 'Fácil' },
-  { value: 1, label: 'Normal' },
-  { value: 2, label: 'Difícil' },
-  { value: 3, label: 'Experto' },
-]
-
-function DifficultyFilter({ current }: { current: number[] }) {
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Dificultad
-      </p>
-      <div className="space-y-1.5">
-        {DIFFICULTY_OPTIONS.map(({ value, label }) => {
-          const isActive = current.includes(value)
-          const newDiff = isActive
-            ? current.filter((d) => d !== value)
-            : [...current, value]
-          const param = newDiff.length > 0 ? `?${newDiff.map((d) => `difficulty=${d}`).join('&')}` : '/'
-          return (
-            <a
-              key={value}
-              href={param}
-              className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1 transition-colors ${
-                isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-secondary'
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
-                  isActive ? 'bg-primary border-primary' : 'border-input'
-                }`}
-              >
-                {isActive && <span className="text-primary-foreground text-[10px]">✓</span>}
-              </span>
-              {label}
-            </a>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-const TAG_TYPE_LABELS: Record<string, string> = {
-  'meal-type': 'Tipo de comida',
-  cuisine: 'Cocina',
-  preference: 'Preferencias',
-  feature: 'Características',
-  diet: 'Dieta',
-  other: 'Más categorías',
-}
-
-function TagFilterGroup({
-  type,
-  tags,
-  selectedSlugs,
-}: {
-  type: string
-  tags: Array<{ id: string; name: string; slug: string; count: number }>
-  selectedSlugs: string[]
-}) {
-  const label = TAG_TYPE_LABELS[type] ?? type
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
-      <div className="space-y-1">
-        {tags
-          .filter((t) => t.count > 0)
-          .slice(0, 8)
-          .map((tag) => {
-            const isActive = selectedSlugs.includes(tag.slug)
-            const newSlugs = isActive
-              ? selectedSlugs.filter((s) => s !== tag.slug)
-              : [...selectedSlugs, tag.slug]
-            const param =
-              newSlugs.length > 0
-                ? `?${newSlugs.map((s) => `tags=${s}`).join('&')}`
-                : '/'
-            return (
-              <a
-                key={tag.id}
-                href={param}
-                className={`flex items-center justify-between text-sm rounded-lg px-2 py-1 transition-colors ${
-                  isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-secondary'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                      isActive ? 'bg-primary border-primary' : 'border-input'
-                    }`}
-                  >
-                    {isActive && <span className="text-primary-foreground text-[10px]">✓</span>}
-                  </span>
-                  {tag.name}
-                </span>
-                <span className="text-xs text-muted-foreground">{tag.count}</span>
-              </a>
-            )
-          })}
-      </div>
-    </div>
-  )
-}
-
-// Mobile filter button — placeholder, will be enhanced in Sprint 2
-function MobileFilterButton({
-  activeCount,
-}: {
-  tagsByType: Record<string, Array<{ id: string; name: string; slug: string; count: number }>>
-  currentFilters: RecipeFilters
-  activeCount: number
-}) {
-  return (
-    <a
-      href="/filtros"
-      className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-border hover:border-primary hover:text-primary transition-colors"
-    >
-      <span>Filtros</span>
-      {activeCount > 0 && (
-        <span className="bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
-          {activeCount}
-        </span>
-      )}
-    </a>
   )
 }
