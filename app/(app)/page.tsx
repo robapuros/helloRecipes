@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { RecipeGrid, RecipeGridSkeleton } from '@/components/recipe-grid'
+import { RecipeGridSkeleton } from '@/components/recipe-grid'
+import { InfiniteRecipeGrid } from '@/components/infinite-recipe-grid'
 import { FilterControls } from '@/components/filter-controls'
 import { FilterDrawer } from '@/components/filter-drawer'
 import { getRecipes, getTagsWithCounts } from '@/lib/queries/recipes'
@@ -7,9 +8,9 @@ import { getIngredientsByIds, getUtensilsWithCounts } from '@/lib/queries/ingred
 import type { RecipeFilters } from '@/lib/queries/recipes'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Todas las recetas',
-}
+export const metadata: Metadata = { title: 'Todas las recetas' }
+
+const PAGE_SIZE = 24
 
 interface PageProps {
   searchParams: Promise<{
@@ -24,16 +25,17 @@ interface PageProps {
 }
 
 async function RecipesContent({ filters }: { filters: RecipeFilters }) {
-  const recipes = await getRecipes(filters)
+  const all = await getRecipes(filters)
+  const initial = all.slice(0, PAGE_SIZE)
 
   return (
     <div>
       <p className="text-sm text-muted-foreground mb-5">
-        {recipes.length === 0
+        {all.length === 0
           ? 'No se encontraron recetas con esos filtros'
-          : `${recipes.length} receta${recipes.length !== 1 ? 's' : ''}`}
+          : `${all.length} receta${all.length !== 1 ? 's' : ''}`}
       </p>
-      <RecipeGrid recipes={recipes} />
+      <InfiniteRecipeGrid initialRecipes={initial} initialTotal={all.length} />
     </div>
   )
 }
@@ -41,18 +43,14 @@ async function RecipesContent({ filters }: { filters: RecipeFilters }) {
 export default async function GalleryPage({ searchParams }: PageProps) {
   const params = await searchParams
 
-  // Parse URL search params into filters
   const filters: RecipeFilters = {}
-
   if (params.q) filters.search = params.q
   if (params.maxTime) filters.maxTime = parseInt(params.maxTime)
   if (params.difficulty) {
     const raw = Array.isArray(params.difficulty) ? params.difficulty : [params.difficulty]
     filters.difficulty = raw.map(Number).filter((n) => !isNaN(n))
   }
-  if (params.tags) {
-    filters.tagSlugs = Array.isArray(params.tags) ? params.tags : [params.tags]
-  }
+  if (params.tags) filters.tagSlugs = Array.isArray(params.tags) ? params.tags : [params.tags]
   if (params.ingredientIds) {
     filters.ingredientIds = Array.isArray(params.ingredientIds)
       ? params.ingredientIds
@@ -65,14 +63,12 @@ export default async function GalleryPage({ searchParams }: PageProps) {
       : [params.utensilIds]
   }
 
-  // Parallel data fetching
   const [tags, utensils, initialIngredients] = await Promise.all([
     getTagsWithCounts(),
     getUtensilsWithCounts(),
     getIngredientsByIds(filters.ingredientIds ?? []),
   ])
 
-  // Group tags by type for the filter UI
   const tagsByType = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
     const group = tag.type ?? 'other'
     if (!acc[group]) acc[group] = []
@@ -89,11 +85,11 @@ export default async function GalleryPage({ searchParams }: PageProps) {
     (filters.utensilIds?.length ?? 0)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
       {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Nuestras recetas</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Nuestras recetas</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           Todas las recetas HelloFresh guardadas para siempre ❤️
         </p>
       </div>
@@ -113,7 +109,7 @@ export default async function GalleryPage({ searchParams }: PageProps) {
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Mobile filter button */}
+          {/* Mobile: filter row */}
           <div className="flex items-center justify-between mb-5 lg:hidden">
             <FilterDrawer
               tagsByType={tagsByType}

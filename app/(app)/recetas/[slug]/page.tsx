@@ -99,7 +99,7 @@ export default async function RecipePage({ params }: PageProps) {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 lg:pb-8">
 
         {/* Meta strip */}
         <div className="flex flex-wrap items-center gap-4 mb-6 pb-6 border-b border-border">
@@ -142,11 +142,11 @@ export default async function RecipePage({ params }: PageProps) {
           </p>
         )}
 
-        {/* Two-column layout */}
+        {/* Two-column layout — on mobile ingredients appear first (order-1), steps second (order-2) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
 
-          {/* Left: Steps */}
-          <div className="space-y-8">
+          {/* Left: Steps — shown second on mobile */}
+          <div className="space-y-8 order-2 lg:order-1">
             <h2 className="text-lg font-bold">Preparación</h2>
             {steps.length === 0 && (
               <p className="text-muted-foreground text-sm">No hay pasos disponibles.</p>
@@ -177,8 +177,8 @@ export default async function RecipePage({ params }: PageProps) {
             ))}
           </div>
 
-          {/* Right: Ingredients + Utensils + Nutrition (sticky) */}
-          <div className="space-y-5 lg:sticky lg:top-24">
+          {/* Right: Ingredients + Utensils + Nutrition — shown first on mobile */}
+          <div className="space-y-5 order-1 lg:order-2 lg:sticky lg:top-24">
 
             {/* Ingredients with servings toggle */}
             <ServingsToggle

@@ -10,7 +10,7 @@ export default async function ListaIndexPage() {
   const lists = await getShoppingLists()
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Listas de la compra</h1>

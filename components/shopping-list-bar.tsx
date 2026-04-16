@@ -32,7 +32,7 @@ export function ShoppingListBar() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none">
+    <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 z-50 flex justify-center pb-2 lg:pb-4 px-4 pointer-events-none">
       <div className="pointer-events-auto w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
         {/* Recipe thumbnails row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-border/50 overflow-x-auto no-scrollbar">
