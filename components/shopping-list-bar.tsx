@@ -9,15 +9,16 @@ import { Button } from '@/components/ui/button'
 import { createShoppingListAction } from '@/app/actions/shopping-list'
 
 export function ShoppingListBar() {
-  const { selected, remove, clear, count } = useShoppingListStore()
+  const { selected, remove, clear } = useShoppingListStore()
   const [listName, setListName] = useState('')
   const [showNameInput, setShowNameInput] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
-  if (count === 0) return null
-
   const recipes = Array.from(selected.values())
+  const count = selected.size
+
+  if (count === 0) return null
 
   const handleCreate = () => {
     const name = listName.trim() || `Lista ${new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`

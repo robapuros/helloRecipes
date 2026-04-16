@@ -9,8 +9,8 @@ interface Props {
 }
 
 export function SelectableRecipeCard({ recipe }: Props) {
-  const { isSelected, toggle } = useShoppingListStore()
-  const selected = isSelected(recipe.id)
+  const { selected: selectedMap, toggle } = useShoppingListStore()
+  const selected = selectedMap.has(recipe.id)
 
   return (
     <div className="relative group/selectable">

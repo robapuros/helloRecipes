@@ -15,8 +15,8 @@ interface RecipeStickyHeaderProps {
 
 export function RecipeStickyHeader({ recipeId, name, imageUrl, totalTimeMin }: RecipeStickyHeaderProps) {
   const [visible, setVisible] = useState(false)
-  const { isSelected, toggle } = useShoppingListStore()
-  const selected = isSelected(recipeId)
+  const { selected: selectedMap, toggle } = useShoppingListStore()
+  const selected = selectedMap.has(recipeId)
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 300)

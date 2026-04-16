@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface SelectedRecipe {
+export interface SelectedRecipe {
   id: string
   name: string
   image_url: string | null
@@ -12,11 +12,9 @@ interface ShoppingListStore {
   add: (recipe: SelectedRecipe) => void
   remove: (id: string) => void
   clear: () => void
-  isSelected: (id: string) => boolean
-  count: number
 }
 
-export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
+export const useShoppingListStore = create<ShoppingListStore>((set) => ({
   selected: new Map(),
 
   toggle: (recipe) =>
@@ -43,10 +41,4 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
     }),
 
   clear: () => set({ selected: new Map() }),
-
-  isSelected: (id) => get().selected.has(id),
-
-  get count() {
-    return get().selected.size
-  },
 }))
