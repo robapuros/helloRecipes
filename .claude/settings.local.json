@@ -14,7 +14,32 @@
       "Bash(cp -r /root/hello-recipes/. /root/helloRecipes/)",
       "Bash(rm -rf /root/hello-recipes)",
       "Bash(npm install *)",
-      "Bash(npx shadcn@latest *)"
+      "Bash(npx shadcn@latest *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git remote *)",
+      "Bash(git config *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'Sprint 1: Foundation + Data Import' --base main --head sprint/1-foundation --body ' *)",
+      "Bash(curl -s -L -A 'Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36' https://www.hellofresh.es/_next/data/7.98.29137/recipes.json -o /tmp/hf_test.json)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(curl -s -L -A 'Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36' https://www.hellofresh.es/_next/data/7.98.29196/recipes.json -o /tmp/hf_recipes.json)",
+      "Bash(python3 *)",
+      "Bash(curl -s -A 'Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36' 'https://www.hellofresh.es/gw/recipes/recipes?country=ES&locale=es-ES&max-prep-time=60&page=1&take=20' -H 'Accept: application/json' -o /tmp/hf_api.json)",
+      "Bash(echo \"Status: $?\")",
+      "Bash(npx tsx *)",
+      "Bash(pkill -f \"import-hellofresh\")",
+      "Bash(curl *)",
+      "Bash(node *)",
+      "Bash(xargs -I{} echo \"Failures: {}\")",
+      "Bash(git merge *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   }
 }

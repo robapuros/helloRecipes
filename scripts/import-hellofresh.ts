@@ -157,36 +157,38 @@ async function logError(recipe: HFRecipe, errorType: string, errorMessage: strin
   })
 }
 
+function pickBest(a: HFRecipe, b: HFRecipe): HFRecipe {
+  if (a.active && !b.active) return a
+  if (!a.active && b.active) return b
+  const ra = a.averageRating ?? 0, rb = b.averageRating ?? 0
+  if (ra !== rb) return ra > rb ? a : b
+  return (a.updatedAt ?? '') >= (b.updatedAt ?? '') ? a : b
+}
+
 /**
- * Deduplicate recipes by slug.
- * When multiple recipes share a slug, prefer: active > highest rating > most recent.
- * This handles HelloFresh "variant" recipes (serving sizes, years) sharing a base slug.
+ * Deduplicate by slug first, then by normalised name.
+ * HelloFresh has two layers of duplication:
+ *   1. Same slug (serving-size or yearly variants)
+ *   2. Same display name with different slugs (re-published recipes)
  */
 function deduplicateBySlugs(recipes: HFRecipe[]): HFRecipe[] {
+  // Pass 1: deduplicate by slug
   const bySlug = new Map<string, HFRecipe>()
-
   for (const recipe of recipes) {
     if (!recipe.slug) continue
     const existing = bySlug.get(recipe.slug)
-    if (!existing) {
-      bySlug.set(recipe.slug, recipe)
-      continue
-    }
-    // Prefer active recipes
-    if (recipe.active && !existing.active) { bySlug.set(recipe.slug, recipe); continue }
-    if (!recipe.active && existing.active) continue
-    // Then prefer higher rating
-    const ratingNew = recipe.averageRating ?? 0
-    const ratingOld = existing.averageRating ?? 0
-    if (ratingNew > ratingOld) { bySlug.set(recipe.slug, recipe); continue }
-    if (ratingNew < ratingOld) continue
-    // Then prefer most recently updated
-    if ((recipe.updatedAt ?? '') > (existing.updatedAt ?? '')) {
-      bySlug.set(recipe.slug, recipe)
-    }
+    bySlug.set(recipe.slug, existing ? pickBest(recipe, existing) : recipe)
   }
 
-  return Array.from(bySlug.values())
+  // Pass 2: deduplicate by normalised name (lowercase + trimmed)
+  const byName = new Map<string, HFRecipe>()
+  for (const recipe of bySlug.values()) {
+    const key = recipe.name.trim().toLowerCase()
+    const existing = byName.get(key)
+    byName.set(key, existing ? pickBest(recipe, existing) : recipe)
+  }
+
+  return Array.from(byName.values())
 }
 
 async function main() {
