@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, ShoppingCart, Settings } from 'lucide-react'
+import { Home, Search, ShoppingCart, PlusCircle } from 'lucide-react'
 import { useShoppingListStore } from '@/store/shopping-list'
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Inicio' },
   { href: '/?search=1', icon: Search, label: 'Buscar', matchHref: '/' },
   { href: '/lista', icon: ShoppingCart, label: 'Lista' },
-  { href: '/admin/importaciones', icon: Settings, label: 'Admin' },
+  { href: '/admin/recetas/nueva', icon: PlusCircle, label: 'Añadir' },
 ]
 
 export function BottomNav() {

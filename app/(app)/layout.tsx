@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChefHat, ShoppingCart, Settings } from 'lucide-react'
+import { ChefHat, ShoppingCart, PlusCircle } from 'lucide-react'
 import { ShoppingListBar } from '@/components/shopping-list-bar'
 import { BottomNav } from '@/components/bottom-nav'
 
@@ -27,11 +27,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Lista de la compra
             </Link>
             <Link
-              href="/admin/importaciones"
+              href="/admin/recetas/nueva"
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-secondary"
             >
-              <Settings className="w-4 h-4" />
-              Admin
+              <PlusCircle className="w-4 h-4" />
+              Añadir receta
             </Link>
           </nav>
         </div>
