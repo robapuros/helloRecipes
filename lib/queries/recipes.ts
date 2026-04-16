@@ -95,6 +95,7 @@ export async function getRecipes(filters: RecipeFilters = {}): Promise<RecipeCar
     `,
     )
     .order('name')
+    .limit(5000) // PostgREST default cap is 1000 — raise it well above expected collection size
 
   if (allowedIds) {
     query = query.in('id', allowedIds)
