@@ -10,9 +10,14 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
       {
-        // HelloFresh CDN (fallback during development)
+        // HelloFresh CDN — used for images during import
         protocol: 'https',
         hostname: 'img.hellofresh.com',
+      },
+      {
+        // HelloFresh CloudFront CDN
+        protocol: 'https',
+        hostname: 'd3hvwccx09j84u.cloudfront.net',
       },
       {
         protocol: 'https',

@@ -157,10 +157,48 @@ async function logError(recipe: HFRecipe, errorType: string, errorMessage: strin
   })
 }
 
+/**
+ * Deduplicate recipes by slug.
+ * When multiple recipes share a slug, prefer: active > highest rating > most recent.
+ * This handles HelloFresh "variant" recipes (serving sizes, years) sharing a base slug.
+ */
+function deduplicateBySlugs(recipes: HFRecipe[]): HFRecipe[] {
+  const bySlug = new Map<string, HFRecipe>()
+
+  for (const recipe of recipes) {
+    if (!recipe.slug) continue
+    const existing = bySlug.get(recipe.slug)
+    if (!existing) {
+      bySlug.set(recipe.slug, recipe)
+      continue
+    }
+    // Prefer active recipes
+    if (recipe.active && !existing.active) { bySlug.set(recipe.slug, recipe); continue }
+    if (!recipe.active && existing.active) continue
+    // Then prefer higher rating
+    const ratingNew = recipe.averageRating ?? 0
+    const ratingOld = existing.averageRating ?? 0
+    if (ratingNew > ratingOld) { bySlug.set(recipe.slug, recipe); continue }
+    if (ratingNew < ratingOld) continue
+    // Then prefer most recently updated
+    if ((recipe.updatedAt ?? '') > (existing.updatedAt ?? '')) {
+      bySlug.set(recipe.slug, recipe)
+    }
+  }
+
+  return Array.from(bySlug.values())
+}
+
 async function main() {
   console.log('\n🍳 HelloRecipes Import Script\n')
 
-  const recipes = await loadRecipes()
+  const rawRecipes = await loadRecipes()
+  console.log(`📦 Raw recipes fetched: ${rawRecipes.length}`)
+
+  const recipes = deduplicateBySlugs(rawRecipes)
+  console.log(`🔀 After deduplication by slug: ${recipes.length} unique recipes`)
+  console.log(`   (${rawRecipes.length - recipes.length} duplicates removed)\n`)
+
   const total = recipes.length
   let imported = 0
   let failed = 0

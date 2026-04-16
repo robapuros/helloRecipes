@@ -6,11 +6,19 @@ export function parseTimeMinutes(timeStr: string | undefined | null): number | n
   if (!timeStr) return null
   const str = timeStr.trim()
 
-  // Patterns: "25m", "1h", "1h 30m", "1h30m", "90m"
-  const hoursAndMinutes = str.match(/^(?:(\d+)h\s*)?(?:(\d+)m)?$/)
-  if (hoursAndMinutes && (hoursAndMinutes[1] || hoursAndMinutes[2])) {
-    const hours = parseInt(hoursAndMinutes[1] || '0', 10)
-    const minutes = parseInt(hoursAndMinutes[2] || '0', 10)
+  // ISO 8601 duration: PT35M, PT1H, PT1H30M, P0D
+  const iso = str.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/)
+  if (iso && (iso[1] || iso[2])) {
+    const hours = parseInt(iso[1] || '0', 10)
+    const minutes = parseInt(iso[2] || '0', 10)
+    return hours * 60 + minutes
+  }
+
+  // Legacy HF format: "25m", "1h", "1h 30m", "1h30m"
+  const legacy = str.match(/^(?:(\d+)h\s*)?(?:(\d+)m)?$/)
+  if (legacy && (legacy[1] || legacy[2])) {
+    const hours = parseInt(legacy[1] || '0', 10)
+    const minutes = parseInt(legacy[2] || '0', 10)
     return hours * 60 + minutes
   }
 
